@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    android:title="@string/settings_title">
+    <MultiSelectListPreference
+        android:defaultValue="@array/sections_default_value"
+        android:entries="@array/section_labels"
+        android:entryValues="@array/section_labels"
+        android:key="@string/choose_sections_key"
+        android:title="@string/choose_sections_title" />
+</PreferenceScreen>

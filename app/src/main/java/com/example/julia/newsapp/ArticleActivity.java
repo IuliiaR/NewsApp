@@ -2,18 +2,28 @@ package com.example.julia.newsapp;
 
 import android.app.LoaderManager;
 import android.content.Context;
+import android.content.Intent;
 import android.content.Loader;
+import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.support.v7.app.AppCompatActivity;
+import android.net.Uri;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
+import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 public class ArticleActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<List<Article>> {
 
@@ -24,9 +34,7 @@ public class ArticleActivity extends AppCompatActivity implements LoaderManager.
     private View mProgressState;
     private static final String API_KEY = "test";
     private static final String GUARDIAN_REQUEST_URL =
-            "http://content.guardianapis.com/search?section=science%7Cenvironment%7Ctechnology&" +
-                    "show-fields=byline%2Cthumbnail&api-key=" + API_KEY;
-
+            "http://content.guardianapis.com/search";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -65,7 +73,21 @@ public class ArticleActivity extends AppCompatActivity implements LoaderManager.
 
     @Override
     public Loader<List<Article>> onCreateLoader(int id, Bundle args) {
-        return new ArticleLoader(this, GUARDIAN_REQUEST_URL);
+        SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+        Set<String> prefSet = sharedPrefs.getStringSet(getString(R.string.choose_sections_key),
+                new HashSet<>(Arrays.asList(getResources().getStringArray(R.array.sections_default_value))));
+
+        // parse breaks apart the URI string that's passed into its parameter
+        Uri baseUri = Uri.parse(GUARDIAN_REQUEST_URL);
+
+        // buildUpon prepares the baseUri that we just parsed so we can add query parameters to it
+        Uri.Builder uriBuilder = baseUri.buildUpon();
+
+        uriBuilder.appendQueryParameter("section", getMultiParamQueryString(prefSet));
+        uriBuilder.appendQueryParameter("show-fields", "byline,thumbnail");
+        uriBuilder.appendQueryParameter("api-key", API_KEY);
+
+        return new ArticleLoader(this, uriBuilder.toString());
     }
 
     @Override
@@ -84,5 +106,40 @@ public class ArticleActivity extends AppCompatActivity implements LoaderManager.
     @Override
     public void onLoaderReset(Loader<List<Article>> loader) {
         mAdapter.clear();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+        if (id == R.id.action_settings) {
+            Intent settingsIntent = new Intent(this, SettingsActivity.class);
+            startActivity(settingsIntent);
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    private String getMultiParamQueryString(Set<String> prefSet){
+        if (prefSet.isEmpty()){
+            return "";
+        }
+
+        StringBuilder queryStr = new StringBuilder();
+        Iterator<String> itr = prefSet.iterator();
+
+        queryStr.append(itr.next().toLowerCase());
+
+        while (itr.hasNext()){
+            queryStr.append('|');
+            queryStr.append(itr.next().toLowerCase());
+        }
+
+        return queryStr.toString();
     }
 }
